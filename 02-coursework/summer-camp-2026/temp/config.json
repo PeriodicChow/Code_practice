@@ -1,0 +1,99 @@
+{
+    "_comment": "robot_lab 配置文件 —— 部署前请根据实际硬件环境修改以下参数",
+
+    "system_config": {
+        "_comment": "系统连接配置",
+        "robot_ip": "192.168.1.100",
+        "_robot_ip_comment": "JAKA 机械臂的 IP 地址",
+        "agv_ip": "192.168.1.200",
+        "_agv_ip_comment": "AGV 底盘的 IP 地址",
+        "agv_port": 8080
+    },
+
+    "camera_config": {
+        "_comment": "Orbbec 深度相机配置",
+        "serial_number": "",
+        "_serial_number_comment": "相机序列号，空串表示使用默认相机",
+        "color_width": 1280,
+        "_color_width_comment": "彩色图宽度（像素）",
+        "color_height": 800,
+        "depth_width": 1280,
+        "depth_height": 800,
+        "fps": 15,
+        "_fps_comment": "帧率（每秒采集帧数）",
+        "align_mode": "HW",
+        "stable_frames": 5,
+        "_stable_frames_comment": "多帧采样数量，取中位数消除深度噪声（建议 3~10）"
+    },
+
+    "detection_config": {
+        "_comment": "YOLO 目标检测配置",
+        "model_path": "weights/best.pt",
+        "_model_path_comment": "YOLO 模型权重文件路径（相对于工程根目录）",
+        "confidence_threshold": 0.85,
+        "_confidence_threshold_comment": "置信度阈值，低于此值的检测结果会被过滤（0~1）",
+        "iou_threshold": 0.8,
+        "_iou_threshold_comment": "IoU 阈值，用于非极大值抑制（NMS）",
+        "target_tags": ["LaysBBQ", "NfSpring", "BBQ"],
+        "_target_tags_comment": "需要检测的目标类别名称列表",
+        "save_detection_image": true,
+        "_save_detection_image_comment": "是否保存检测结果图片",
+        "output_dir": "output"
+    },
+
+    "calibration": {
+        "_comment": "相机标定参数（手眼标定结果），需要用实际标定数据替换",
+        "K": [[905.0, 0.0, 640.0], [0.0, 905.0, 400.0], [0.0, 0.0, 1.0]],
+        "_K_comment": "相机内参矩阵 3x3: [[fx, 0, cx], [0, fy, cy], [0, 0, 1]]",
+        "R_camera_to_world": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        "_R_comment": "相机到世界坐标系的旋转矩阵 3x3",
+        "T_camera_to_world": [0, 0, 0]
+    },
+
+    "robot_params": {
+        "_comment": "机械臂运动参数",
+        "base_pose": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "_base_pose_comment": "初始安全姿态，6个关节角度（弧度）",
+        "move_speed": 200,
+        "_move_speed_comment": "关节运动速度（1~300）",
+        "move_mode": 0,
+        "_move_mode_comment": "运动模式：0=绝对运动, 1=增量运动",
+        "relative_offset_x": 0.0,
+        "_offset_x_comment": "抓取时 X 方向偏移量（mm），用于微调抓取位置",
+        "relative_offset_y": 0.0,
+        "_offset_y_comment": "抓取时 Y 方向偏移量（mm）",
+        "relative_offset_z": 0.0,
+        "_offset_z_comment": "抓取时 Z 方向偏移量（mm），0表示使用目标深度",
+        "rx_fix": 3.14,
+        "_rx_fix_comment": "固定抓取姿态 Rx（弧度），约180度=朝下",
+        "ry_fix": 0.0,
+        "_ry_fix_comment": "固定抓取姿态 Ry（弧度）",
+        "rz_fix": 0.0
+    },
+
+    "grasp_config": {
+        "_comment": "抓取动作参数",
+        "forward_move": 100,
+        "_forward_move_comment": "夹爪前进距离（mm），从预抓取位向目标推进",
+        "lift_height": 150,
+        "_lift_height_comment": "抓取后抬升高度（mm）",
+        "retract_distance": -100,
+        "_retract_distance_comment": "抬升后撤退距离（mm），负值=后退",
+        "grab_wait_time": 0.5,
+        "_grab_wait_time_comment": "夹爪开合后等待时间（秒），确保夹爪动作完成",
+        "move_wait_time": 0.3,
+        "_move_wait_time_comment": "每次关节运动后等待时间（秒）",
+        "io_tool": 1
+    },
+
+    "agv_config": {
+        "_comment": "AGV 底盘导航参数",
+        "pickup_marker": "station1",
+        "_pickup_marker_comment": "取货点标记名称（AGV地图上预标定的位置）",
+        "delivery_marker": "station4",
+        "_delivery_marker_comment": "放置点标记名称",
+        "backward_speed": -0.25,
+        "_backward_speed_comment": "后退速度（m/s），负值表示后退",
+        "backward_duration": 2
+    }
+}

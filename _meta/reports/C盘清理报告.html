@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C 盘清理分析报告 — JerryZhou 的 Windows</title>
+<style>
+  :root{
+    --bg:#0f1420; --card:#171e2e; --card2:#1d2639;
+    --line:#2a3550; --fg:#e6edf7; --dim:#93a2bd; --acc:#4da3ff;
+    --ok:#3ecf8e; --warn:#ffc44d; --dang:#ff6b6b; --purple:#a78bfa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b0f18,#0f1420 400px);color:var(--fg);
+       font:14px/1.6 "Segoe UI","Microsoft YaHei",system-ui,sans-serif;padding:0 0 80px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+  header{padding:44px 0 26px;border-bottom:1px solid var(--line);margin-bottom:28px}
+  h1{margin:0 0 8px;font-size:27px;letter-spacing:.3px}
+  .sub{color:var(--dim);font-size:13px}
+  .sub b{color:var(--fg);font-weight:600}
+  h2{font-size:19px;margin:38px 0 14px;padding-left:11px;border-left:3px solid var(--acc)}
+  h3{font-size:15px;margin:24px 0 10px;color:var(--fg)}
+  .notice{background:#241a12;border:1px solid #6b4a1d;border-left:4px solid var(--warn);
+          border-radius:9px;padding:15px 18px;margin:0 0 26px}
+  .notice strong{color:var(--warn)}
+  .notice ul{margin:9px 0 0;padding-left:20px}
+  .notice li{margin:5px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px;margin:18px 0}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:15px 17px}
+  .kpi .lbl{color:var(--dim);font-size:12px;letter-spacing:.4px}
+  .kpi .val{font-size:24px;font-weight:650;margin:5px 0 1px}
+  .kpi .note{color:var(--dim);font-size:11.5px}
+  .kpi.g .val{color:var(--ok)} .kpi.y .val{color:var(--warn)}
+  .kpi.p .val{color:var(--purple)} .kpi.b .val{color:var(--acc)}
+  .bar{height:13px;border-radius:7px;overflow:hidden;display:flex;background:#0b1020;
+       border:1px solid var(--line);margin:6px 0 4px}
+  .bar span{height:100%;display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--dim);margin-top:8px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:11px;
+        overflow:hidden;border:1px solid var(--line);font-size:13.2px}
+  th{background:var(--card2);text-align:left;padding:10px 13px;color:var(--dim);
+     font-weight:600;font-size:12.3px;letter-spacing:.3px;border-bottom:1px solid var(--line)}
+  td{padding:9px 13px;border-bottom:1px solid #1f2940;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#1b2436}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+  .path{font-family:"Cascadia Mono",Consolas,monospace;font-size:12px;color:#9fb4d6;word-break:break-all}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:650;white-space:nowrap}
+  .t-safe{background:#123a2b;color:var(--ok);border:1px solid #1e6b4d}
+  .t-mid{background:#3a2f12;color:var(--warn);border:1px solid #6b5520}
+  .t-care{background:#3a1b1b;color:var(--dang);border:1px solid #6b2a2a}
+  .t-keep{background:#241a3a;color:var(--purple);border:1px solid #4c3580}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 12px}
+  button{background:var(--card2);color:var(--fg);border:1px solid var(--line);border-radius:8px;
+         padding:8px 15px;font-size:13px;cursor:pointer;font-family:inherit;transition:.15s}
+  button:hover{background:#26324c;border-color:#3a4a6d}
+  button.primary{background:#17416e;border-color:#2a6ba8}
+  button.primary:hover{background:#1b5089}
+  .selected-box{background:var(--card2);border:1px solid var(--line);border-radius:9px;
+                padding:10px 16px;font-size:13px;margin-left:auto}
+  .selected-box b{color:var(--ok);font-size:17px}
+  input[type=checkbox]{width:16px;height:16px;accent-color:#4da3ff;cursor:pointer;margin:0}
+  code{font-family:"Cascadia Mono",Consolas,monospace;font-size:12px;background:#0d1424;
+       padding:2px 6px;border-radius:5px;color:#a8c4ea;border:1px solid #1e2942}
+  pre{background:#0d1424;border:1px solid var(--line);border-radius:9px;padding:13px 16px;
+      overflow-x:auto;font-family:"Cascadia Mono",Consolas,monospace;font-size:12.3px;color:#a8c4ea;line-height:1.65}
+  footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);color:var(--dim);font-size:12.3px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.two{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:17px 19px}
+  .card p{margin:7px 0}
+  .hl{color:var(--acc);font-weight:600}
+  .bad{color:var(--dang);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>C 盘清理分析报告</h1>
+  <div class="sub">
+    主机：<b>JerryZhou</b> ・ Windows NT <b>10.0.26200</b> ・ 扫描时间：<b id="ts"></b><br>
+    扫描范围：整个 C: 卷（含隐藏 / 系统目录）・ 方式：<b>只读统计</b>
+  </div>
+</header>
+
+<div class="notice">
+  <strong>⚠️ 本报告只做分析，没有删除任何文件</strong>
+  <ul>
+    <li>所有清理动作都需要你手动执行，或明确授权后由我执行。</li>
+    <li>报告里的体积是<b>扫描当时的字节数</b>，会随系统使用变化。</li>
+    <li>标 <span class="tag t-care">谨慎</span> 的项目<b>不要盲目删除</b>，先看说明；标 <span class="tag t-keep">勿删</span> 的项目只是占空间，删了会出问题。</li>
+    <li>清理前建议先创建一个系统还原点。</li>
+  </ul>
+</div>
+
+<h2>一、C 盘占用总览</h2>
+<div class="grid">
+  <div class="kpi b"><div class="lbl">已扫描总占用</div><div class="val">273.9 GB</div><div class="note">各顶层目录实测合计</div></div>
+  <div class="kpi g"><div class="lbl">可安全回收（低风险）</div><div class="val">26.2 GB</div><div class="note">缓存 / 临时文件 / 回收站</div></div>
+  <div class="kpi y"><div class="lbl">可回收（需确认）</div><div class="val">57.2 GB</div><div class="note">更新包 / 下载 / 模型缓存 / 旧版服务端包</div></div>
+  <div class="kpi p"><div class="lbl">占空间但勿删</div><div class="val">85.0 GB</div><div class="note">WSL / 休眠 / 页面文件</div></div>
+</div>
+
+<h3>顶层目录占用</h3>
+<div class="bar" id="barTop"></div>
+<div class="legend" id="legTop"></div>
+
+<h3>占用明细</h3>
+<table>
+  <thead><tr><th>目录</th><th class="num">实测大小</th><th class="num">占比</th><th>说明</th></tr></thead>
+  <tbody id="tbTop"></tbody>
+</table>
+
+<h2>二、可清理项目清单</h2>
+<div class="toolbar">
+  <button class="primary" onclick="sel('safe')">全选「可安全删除」</button>
+  <button onclick="sel('mid')">全选「需确认」</button>
+  <button onclick="sel('none')">清空选择</button>
+  <div class="selected-box">已勾选可回收：<b id="tot">0 MB</b></div>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th style="width:38px"></th><th>项目</th><th class="num">大小</th>
+      <th style="width:86px">风险</th><th>路径 / 清理方式</th>
+    </tr>
+  </thead>
+  <tbody id="tbItems"></tbody>
+</table>
+
+<h2>三、占用大户（不建议直接删除）</h2>
+<table>
+  <thead><tr><th>项目</th><th class="num">大小</th><th>处理建议</th></tr></thead>
+  <tbody id="tbBig"></tbody>
+</table>
+
+<h2>四、最大的单个文件 TOP 30</h2>
+<table>
+  <thead><tr><th class="num" style="width:92px">大小</th><th>文件路径</th></tr></thead>
+  <tbody id="tbFiles"></tbody>
+</table>
+
+<h2>五、清理操作手册</h2>
+<div class="two">
+  <div class="card">
+    <h3 style="margin-top:0">🟢 第一梯队：放心清理（约 26.2 GB）</h3>
+    <p><b>1. 用户临时文件</b> — 5.56 GB<br><span class="path">%LOCALAPPDATA%\Temp</span></p>
+    <p><b>2. Windows 更新缓存</b> — 5.18 GB<br><span class="path">C:\Windows\SoftwareDistribution\Download</span></p>
+    <p><b>3. pip 包缓存</b> — 7.52 GB<br><span class="path">%LOCALAPPDATA%\pip\cache</span></p>
+    <p><b>4. npm 包缓存</b> — 3.32 GB<br><span class="path">%LOCALAPPDATA%\npm-cache</span></p>
+    <p><b>5. 回收站</b> — 600 MB<br><span class="path">C:\$Recycle.Bin</span></p>
+    <p><b>6. 系统与应用缓存</b> — 约 1.0 GB<br><span class="path">…\INetCache、Explorer 缩略图、CrashDumps、WER</span></p>
+    <p><b>7. Edge 浏览器缓存</b> — 227 MB<br><span class="path">…\Microsoft\Edge\User Data\Default\Cache</span></p>
+    <p><b>8. NVIDIA 着色器缓存</b> — 1.53 GB<br><span class="path">…\Local\NVIDIA\DXCache</span>（149 个 .nvph 文件，会自动重建）</p>
+    <p><b>9. 旧版 Node.js 备份</b> — 93.7 MB<br><span class="path">C:\nodejs.bak-22.17.1</span></p>
+    <p style="color:var(--dim);font-size:12.5px;margin-top:12px">
+      这些目录的内容都可以重新生成，删除不影响已安装的程序和你的数据。
+    </p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">🟡 第二梯队：确认后清理（约 57.2 GB）</h3>
+    <p><b>1. Windows 累积更新包</b> — 4.32 GB<br>已安装的 KB5124008 安装包，可通过磁盘清理移除。</p>
+    <p><b>2. Downloads 下载文件夹</b> — 1.73 GB<br>含 GT New Horizons 整合包等，确认不需要再删。</p>
+    <p><b>3. anythingllm-desktop 模型</b> — 8.52 GB<br><span class="path">%APPDATA%\anythingllm-desktop</span>，不用 AnythingLLM 才删。</p>
+    <p><b>4. 各类安装包缓存</b> — 约 2.5 GB<br><span class="path">Package Cache、Windows\Installer、*updater 目录</span></p>
+    <p><b>5. HonorSDK 安装记录</b> — 1.83 GB<br><span class="path">C:\ProgramData\HonorSDK\Records\abinstall</span>，纯日志。</p>
+    <p><b>6. NVIDIA 驱动下载缓存</b> — 757 MB<br><span class="path">…\NVIDIA App\UpdateFramework</span></p>
+    <p><b>7. 浏览器更新包</b> — 492 MB<br><span class="path">%LOCALAPPDATA%\Google\GoogleUpdater\crx_cache</span></p>
+    <p><b>8. Minecraft 资源</b> — 6.50 GB<br><span class="path">%APPDATA%\.minecraft</span>，不玩再动。</p>
+    <p style="color:var(--dim);font-size:12.5px;margin-top:12px">
+      体积可观，但删掉之后某些程序需要重新下载或重装，请逐条确认。
+    </p>
+  </div>
+</div>
+
+<h3>推荐命令（<span class="bad">由你手动执行</span>，我未执行）</h3>
+<pre id="cmds"></pre>
+
+<div class="two" style="margin-top:20px">
+  <div class="card">
+    <h3 style="margin-top:0">🔴 最大空间去向：WSL 虚拟磁盘 71.31 GB</h3>
+    <p><span class="path">C:\Users\JerryZhou\AppData\Local\wsl\{d2b339e6…}\ext4.vhdx</span></p>
+    <p>这是 <span class="hl">WSL 发行版的虚拟硬盘</span>，占掉整个 C 盘的 <span class="hl">约 26%</span>。它是稀疏文件，<b>只会涨不会自己缩</b>——即使你在 WSL 里删了文件，vhdx 也不会变小。</p>
+    <p><b>正确做法</b>：先在 WSL 里清理，然后关机压缩：</p>
+    <pre style="margin:6px 0">wsl --shutdown
+Optimize-VHD -Path "C:\Users\JerryZhou\AppData\Local\wsl\{d2b339e6-3ff7-48de-9bcf-b9cf10bb639e}\ext4.vhdx" -Mode Full</pre>
+    <p style="color:var(--warn);font-size:12.5px">Optimize-VHD 需要 Hyper-V 模块；若是家庭版系统，可改用 <code>diskpart</code> 的 <code>compact vdisk</code>。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">🔴 休眠文件 12.60 GB + 页面文件 5.25 GB</h3>
+    <p><span class="path">C:\hiberfil.sys</span> — 12.60 GB</p>
+    <p>如果你<span class="hl">从不使用「休眠」功能</span>（注意：不是「睡眠」），可以彻底关闭，直接释放 12.6 GB：</p>
+    <pre style="margin:6px 0">powercfg -h off</pre>
+    <p style="color:var(--dim);font-size:12.5px">代价：无法休眠、快速启动失效、开机稍慢。随时可用 <code>powercfg -h on</code> 恢复。</p>
+    <hr style="border:none;border-top:1px solid var(--line);margin:13px 0">
+    <p><span class="path">C:\pagefile.sys</span> — 5.25 GB</p>
+    <p>虚拟内存页面文件，<b class="bad">不建议删除</b>。可以在「高级系统设置 → 性能 → 虚拟内存」里调小，但要保留一定大小，否则程序可能崩溃。</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:20px">
+  <h3 style="margin-top:0">⚠️ 明确不要动的东西</h3>
+  <p><span class="tag t-keep">勿删</span> <span class="path">C:\Windows\WinSxS</span>（13.44 GB）与 <span class="path">C:\Windows\Installer</span>（3.15 GB）— 组件存储与 MSI 安装缓存。手工删除会导致系统更新失败、软件无法修复 / 卸载。只能用官方 <code>DISM /Online /Cleanup-Image /StartComponentCleanup</code> 清理。</p>
+  <p><span class="tag t-keep">勿删</span> <span class="path">C:\Windows\assembly</span> 3.71 GB — .NET 全局程序集缓存（GAC），删除会导致 .NET 程序无法启动。</p>
+  <p><span class="tag t-keep">勿删</span> <span class="path">C:\Windows\SoftwareDistribution</span>（整个目录）— 只清 <code>Download</code> 子目录，直接删整个会让更新组件报错。</p>
+  <p><span class="tag t-keep">勿删</span> <span class="path">C:\ProgramData\LGHUB</span> 1.33 GB、<span class="path">NVIDIA Corporation</span> 3.72 GB — 占空间大，但是罗技 / NVIDIA 驱动数据，删了要重装驱动。</p>
+  <p><span class="tag t-keep">勿删</span> <span class="path">C:\ProgramData\QI-ANXIN Security SDK</span> 1.97 GB — 安全软件数据。</p>
+  <p><span class="tag t-care">谨慎</span> <span class="path">C:\ProgramData\Comms\HNModelCache</span> 6.98 GB — 华为 / HONOR AI 搜索与语音模型缓存，删了相关功能会重新下载，可能反复占空间。</p>
+</div>
+
+<h2>六、本次扫描的覆盖与局限</h2>
+<div class="card">
+  <p><b>已完整统计：</b>顶层 26 个目录、用户配置文件 80 个子目录、AppData\Local 全部约 190 个子目录、AppData\Roaming 全部约 150 个、ProgramData 全部 78 个，以及全部大于 150 MB 的单个文件。</p>
+  <p><b>可能偏小：</b>部分系统保护目录（如 <span class="path">C:\System Volume Information</span> 的系统还原点、<span class="path">C:\Recovery</span>）因权限限制未能读取真实体积，所以「已扫描总占用」略小于分区实际使用量。</p>
+  <p><b>未能读取：</b>扫描会话运行在受限沙箱中，WMI 查询被策略拒绝，因此<b>分区总容量与剩余空间未能取得</b>，本报告所有数字均为目录实测累加值。</p>
+  <p><b>未做：</b>未检测重复文件、未计入 NTFS 压缩与硬链接、未统计页面文件以外的系统保留空间。</p>
+</div>
+
+<footer>
+  报告由 DSH 扫描生成 ・ 数据来源：对 C: 卷的只读递归遍历 ・
+  <b>本报告未执行任何删除、移动或修改操作</b> ・ 所有清理动作请自行确认后手动执行。
+</footer>
+
+</div>
+
+<script>
+const B = 1024;
+const mb = b => b / B / B;
+const gb = b => b / B / B / B;
+const fmt = b => {
+  const m = mb(b);
+  return m >= 1024 ? (gb(b).toFixed(2) + ' GB') : (m.toFixed(0) + ' MB');
+};
+document.getElementById('ts').textContent = new Date().toLocaleString('zh-CN');
+
+/* ---------- 顶层目录 ---------- */
+const top = [
+  ['C:\\Users',  164786502768, '用户数据总目录（含 AppData 与 WSL 虚拟磁盘）'],
+  ['C:\\Windows', 46116360548, '系统目录，含 WinSxS 组件存储'],
+  ['C:\\Program Files', 36428860544, '64 位已安装程序'],
+  ['C:\\ProgramData', 24162735655, '程序公共数据，含驱动与 AI 模型缓存'],
+  ['C:\\Program Files (x86)', 11434909299, '32 位已安装程序'],
+  ['C:\\msys64', 1548303895, 'MSYS2 开发环境'],
+  ['C:\\nodejs', 101537719, 'Node.js 安装目录'],
+  ['C:\\nodejs.bak-22.17.1', 98263809, '旧版 Node.js 备份（可删）'],
+  ['C:\\$Recycle.Bin', 629005302, '回收站'],
+  ['C:\\Microsoft', 33613225, 'Microsoft 目录'],
+  ['C:\\$qaxsection', 76511860, '奇安信安全软件分区块'],
+  ['C:\\ExtensoDesk', 1190763, 'ExtensoDesk 工具'],
+  ['C:\\tmp', 1502432, '临时目录'],
+  ['C:\\inetpub', 176462, 'IIS 默认目录']
+];
+const colors = ['#4da3ff','#7c5cff','#3ecf8e','#ffc44d','#ff8a4d','#ff6b6b','#4dd8cf','#a78bfa',
+                '#6b8cff','#5cc9a7','#e0a33e','#c96b6b'];
+const totalTop = top.reduce((a, r) => a + r[1], 0);
+document.getElementById('barTop').innerHTML = top.slice(0, 12).map((r, i) =>
+  `<span style="width:${(r[1]/totalTop*100).toFixed(2)}%;background:${colors[i%colors.length]}" title="${r[0]} ${fmt(r[1])}"></span>`
+).join('');
+document.getElementById('legTop').innerHTML = top.slice(0, 12).map((r, i) =>
+  `<span><i style="background:${colors[i%colors.length]}"></i>${r[0]} — ${fmt(r[1])}</span>`
+).join('');
+document.getElementById('tbTop').innerHTML = top.map(r => `
+  <tr>
+    <td class="path">${r[0]}</td>
+    <td class="num">${fmt(r[1])}</td>
+    <td class="num" style="color:var(--dim);font-weight:400">${(r[1]/totalTop*100).toFixed(1)}%</td>
+    <td style="color:var(--dim)">${r[2]}</td>
+  </tr>`).join('') + `
+  <tr style="background:#1b2436">
+    <td><b>合计（已扫描部分）</b></td>
+    <td class="num">${fmt(totalTop)}</td>
+    <td class="num">100%</td>
+    <td style="color:var(--dim)">未含系统还原点等受限目录</td>
+  </tr>`;
+
+/* ---------- 清理项目 ---------- */
+const items = [
+  ['用户临时文件 Temp', 5964375546, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\Temp',
+   '15319 个文件。正在运行的程序可能占用少量文件，删不掉的跳过即可。'],
+  ['pip 包缓存', 8074728043, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\pip\\cache',
+   '最大的一项，内含两个 1.9 GB 的 .body 文件。可用 pip cache purge 清理，之后会按需重新下载。'],
+  ['npm 包缓存', 3559423256, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\npm-cache',
+   'npm cache clean --force 即可，不影响已安装的全局包。'],
+  ['Windows 更新下载缓存', 5562675847, 'safe', 'C:\\Windows\\SoftwareDistribution\\Download',
+   '含 4.32 GB 的 KB5124008 安装包（已安装完成）。清理后更新组件会自动重建目录。'],
+  ['回收站', 629005302, 'safe', 'C:\\$Recycle.Bin',
+   '1339 个已删除文件。清空回收站即释放，删除前确认没有想恢复的东西。'],
+  ['用户 CrashDumps 崩溃转储', 99240216, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\CrashDumps',
+   '5 个崩溃转储文件，仅用于排查问题，可删。'],
+  ['资源管理器缩略图缓存', 35867762, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\Microsoft\\Windows\\Explorer',
+   '系统会自动重建，删除后首次浏览图片文件夹会稍慢。'],
+  ['IE / 系统网络缓存 INetCache', 315998, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\Microsoft\\Windows\\INetCache',
+   '体积很小，顺手清理。'],
+  ['Windows 错误报告 WER', 73674140, 'safe', 'C:\\ProgramData\\Microsoft\\Windows\\WER',
+   '13 个错误报告文件，可删。'],
+  ['VS Code 缓存与日志', 166685162, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Roaming\\Code\\Cache + CachedData + logs',
+   '三项合计约 159 MB，Code 会自行重建。'],
+  ['VS Code C++ 智能感知缓存 ipch', 2126000000, 'mid', 'C:\\Users\\JerryZhou\\AppData\\Local\\Microsoft\\vscode-cpptools\\ipch',
+   '约 2.0 GB 的预编译头缓存，8 个文件各约 250 MB。删掉只是首次打开 C++ 项目变慢，会自动重建。'],
+  ['vscode-remote-wsl 旧版服务端包', 3374843664, 'mid', 'C:\\Users\\JerryZhou\\vscode-remote-wsl\\stable',
+   '3.14 GB。多个历史版本的 vscode-server tar.gz（每个 220-300 MB），只保留当前版本即可，其余可删。'],
+  ['旧版 Node.js 备份', 98263809, 'safe', 'C:\\nodejs.bak-22.17.1',
+   '旧版本备份目录，确认当前 Node 正常后可删。'],
+  ['uv 缓存', 200144897, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\uv',
+   'uv 包管理器缓存，可用 uv cache clean 清理。'],
+  ['NVIDIA DXCache 着色器缓存', 1641615360, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\NVIDIA\\DXCache',
+   '149 个 .nvph 文件，会自动重建（游戏首次加载稍慢）。'],
+  ['NVIDIA GLCache / D3DSCache', 1556672, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\NVIDIA\\GLCache + D3DSCache',
+   'OpenGL / Direct3D 缓存，体积很小。'],
+  ['Edge 浏览器缓存', 227373762, 'safe', 'C:\\Users\\JerryZhou\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Cache',
+   '964 个缓存文件，清理不影响书签与登录状态。'],
+  ['HonorSDK 安装记录日志', 1830236484, 'safe', 'C:\\ProgramData\\HonorSDK\\Records\\abinstall',
+   '纯文本日志，单个文件最大 842 MB。属安装审计记录，删了不影响功能。'],
+  ['npm 全局包目录', 1846935488, 'mid', 'C:\\Users\\JerryZhou\\AppData\\Roaming\\npm',
+   '全局安装的包（含 openclaw-cn，其中单个 CUDA dll 就有 424 MB）。删了会丢全局命令，需重装。'],
+  ['puccinialin 插件缓存', 887147718, 'mid', 'C:\\Users\\JerryZhou\\AppData\\Local\\puccinialin',
+   '8845 个文件的插件缓存，确认用途后再删。'],
+  ['PowerToys 数据', 1034944037, 'mid', 'C:\\Users\\JerryZhou\\AppData\\Local\\PowerToys',
+   '含 PowerToys 运行数据与缓存，删掉会重置部分设置。'],
+  ['Google 更新包缓存 crx_cache', 516472602, 'mid', 'C:\\Users\\JerryZhou\\AppData\\Local\\Google\\GoogleUpdater\\crx_cache',
+   'Chrome 更新组件下载的安装包，可删。'],
+  ['Downloads 下载文件夹', 1857708892, 'mid', 'C:\\Users\\JerryZhou\\Downloads',
+   '560 个文件，含 GT New Horizons 整合包（595 MB + 424 MB）等。只有你能判断哪些还要。'],
+  ['anythingllm 本地模型', 9145791913, 'mid', 'C:\\Users\\JerryZhou\\AppData\\Roaming\\anythingllm-desktop',
+   '8.52 GB，主要是 ollama 模型 blob（3.29 GB）与 CUDA 运行库。不用 AnythingLLM 才删。'],
+  ['.minecraft 游戏数据', 6978960991, 'mid', 'C:\\Users\\JerryZhou\\AppData\\Roaming\\.minecraft',
+   '6.50 GB，含存档、资源包、版本文件。删前务必单独备份存档。'],
+  ['NVIDIA 驱动更新缓存', 793206000, 'mid', 'C:\\ProgramData\\NVIDIA Corporation\\NVIDIA App\\UpdateFramework',
+   '下载好的显卡驱动安装包（616.64），驱动已装好则可删。'],
+  ['腾讯软件数据（Roaming）', 3011392872, 'mid', 'C:\\Users\\JerryZhou\\AppData\\Roaming\\Tencent',
+   '2.80 GB，QQ / 微信等的本地缓存与配置。建议在各自 App 内清理，而非直接删目录。'],
+  ['Documents 文档', 4155169297, 'care', 'C:\\Users\\JerryZhou\\Documents',
+   '9311 个文件，你的个人资料，不要批量删。仅审查其中大文件（如 zotero 的 497 MB zip）。'],
+  ['安装包缓存 Package Cache', 431443404, 'care', 'C:\\Users\\JerryZhou\\AppData\\Local\\Package Cache',
+   '含 PowerToys 等 MSI 安装包，用于修复 / 卸载程序。删除会导致修复失败。'],
+  ['Windows Installer 缓存', 399437824, 'care', 'C:\\Windows\\Installer',
+   'MSI 补丁缓存，勿手工删除，否则软件无法卸载或更新。']
+];
+const riskMeta = {
+  safe: ['可安全删除', 't-safe'],
+  mid:  ['需确认',     't-mid'],
+  care: ['谨慎',       't-care']
+};
+const tb = document.getElementById('tbItems');
+tb.innerHTML = items.map((r, i) => {
+  const [label, cls] = riskMeta[r[2]];
+  return `<tr>
+    <td><input type="checkbox" data-risk="${r[2]}" data-v="${r[1]}" id="ck${i}"></td>
+    <td><label for="ck${i}" style="cursor:pointer">${r[0]}</label>
+        <div style="color:var(--dim);font-size:12px;margin-top:2px">${r[4]}</div></td>
+    <td class="num">${fmt(r[1])}</td>
+    <td><span class="tag ${cls}">${label}</span></td>
+    <td class="path">${r[3]}</td>
+  </tr>`;
+}).join('');
+
+function upd(){
+  const v = [...document.querySelectorAll('#tbItems input:checked')]
+    .reduce((a, c) => a + Number(c.dataset.v), 0);
+  document.getElementById('tot').textContent = fmt(v);
+}
+document.addEventListener('change', upd);
+
+function sel(kind){
+  document.querySelectorAll('#tbItems input').forEach(c => {
+    if (kind === 'none') c.checked = false;
+    else if (kind === 'safe') c.checked = (c.dataset.risk === 'safe');
+    else c.checked = (c.dataset.risk === 'safe' || c.dataset.risk === 'mid');
+  });
+  upd();
+}
+upd();
+
+/* ---------- 占用大户 ---------- */
+const big = [
+  ['Windows 组件存储 WinSxS', 14427143018, 'keep',
+   '13.44 GB / 108285 个文件。绝不可手工删除，只能用 DISM /Online /Cleanup-Image /StartComponentCleanup 清理。'],
+  ['Windows Installer 补丁缓存', 3381545647, 'keep',
+   '3.15 GB / 522 个 MSI。用于软件修复与卸载，勿手删。'],
+  ['Windows assembly（.NET 程序集）', 3978862297, 'keep',
+   '3.71 GB，.NET GAC 程序集缓存，勿删。'],
+  ['WSL 虚拟磁盘 ext4.vhdx', 76569116672, 'keep',
+   'WSL 发行版硬盘，稀疏文件只涨不缩。需 wsl --shutdown 后用 Optimize-VHD 压缩，不能直接删。'],
+  ['休眠文件 hiberfil.sys', 13528039424, 'keep',
+   '不用「休眠」功能可直接 powercfg -h off 释放 12.6 GB。'],
+  ['页面文件 pagefile.sys', 5637144576, 'keep',
+   '虚拟内存，不建议删除，可在系统设置中调小。'],
+  ['LGHUB 罗技驱动数据', 1431220069, 'keep', '罗技外设驱动数据，删除需重装驱动。'],
+  ['NVIDIA 驱动数据（两部分）', 5338831850, 'keep',
+   'ProgramData\\NVIDIA Corporation 3.72 GB + ProgramData\\NVIDIA 1.25 GB，显卡驱动组件，勿手删。'],
+  ['HonorSDK', 4331766930, 'mid', '其中含 1.83 GB 可删的 abinstall 安装日志。'],
+  ['Comms（华为 / HONOR AI 模型）', 7488440811, 'mid',
+   '含 6.98 GB HNModelCache 模型缓存，删后相关功能会重新下载。'],
+  ['QI-ANXIN 安全软件（两部分）', 3031478651, 'keep',
+   'Security SDK 1.97 GB + Tianqing 870 MB，安全软件数据，勿删。'],
+  ['Epic 平台数据', 191988671, 'mid', 'Epic 启动器缓存，可删后重登。']
+].map(r => {
+  const tag = r[2] === 'keep' ? '<span class="tag t-keep">勿删</span>'
+            : r[2] === 'care' ? '<span class="tag t-care">谨慎</span>'
+            : '<span class="tag t-mid">需确认</span>';
+  return `<tr><td>${r[0]} ${tag}</td><td class="num">${fmt(r[1])}</td>
+          <td style="color:var(--dim)">${r[3]}</td></tr>`;
+}).join('');
+document.getElementById('tbBig').innerHTML = big;
+
+/* ---------- 大文件 ---------- */
+const files = [
+  ['C:\\Users\\JerryZhou\\AppData\\Local\\wsl\\{d2b339e6-3ff7-48de-9bcf-b9cf10bb639e}\\ext4.vhdx', 76569116672],
+  ['C:\\hiberfil.sys', 13528039424],
+  ['C:\\pagefile.sys', 5637144576],
+  ['C:\\Windows\\SoftwareDistribution\\Download\\8816d51ca4bceaa4\\Windows11.0-KB5124008-x64.msu', 4640857826],
+  ['…\\anythingllm-desktop\\storage\\models\\ollama\\blobs\\sha256-16b83be6…', 3295612928],
+  ['…\\AppData\\Local\\pip\\cache\\http-v2\\c\\e\\7\\8\\ce78c8f7….body', 1926428034],
+  ['…\\AppData\\Local\\pip\\cache\\http-v2\\c\\c\\b\\8\\ccb8e476….body', 1926375050],
+  ['…\\AppData\\Local\\pip\\cache\\http-v2\\1\\9\\0\\2\\1902d8ae….body', 1915220980],
+  ['…\\anythingllm-desktop\\…\\ollama\\cuda_v12\\ggml-cuda.dll', 1510117880],
+  ['C:\\ProgramData\\HonorSDK\\Records\\abinstall\\2026_07_09_22_09_25.txt', 841973696],
+  ['C:\\Program Files\\Docker\\Docker\\resources\\wsl\\docker-wsl-cli.iso', 828305408],
+  ['C:\\Program Files\\HONOR\\HNInferServer\\Models\\LLM\\openvino_model.bin', 818403501],
+  ['…\\NVIDIA App\\UpdateFramework\\…\\616.64-notebook-win10-win11-…-whql-g.exe', 793206000],
+  ['C:\\Program Files\\Docker\\Docker\\resources\\docker-desktop.iso', 753190912],
+  ['…\\ollama\\cuda_v12\\cublasLt64_12.dll', 692449784],
+  ['C:\\Users\\JerryZhou\\Downloads\\GT_New_Horizons_2.8.4_Java_17-25.zip', 595584698],
+  ['C:\\Program Files\\HONOR\\HNInferServer\\Models\\RERANK\\reranker_model.bin', 568670444],
+  ['…\\ProgramData\\Comms\\HNModelCache\\AI\\Search\\Bcembedding\\…blob', 561084791],
+  ['C:\\ProgramData\\HonorSDK\\Records\\abinstall\\2026_06_15_09_58_36.txt', 557793556],
+  ['C:\\Program Files\\HONOR\\HNInferServer\\Models\\BCE\\emb_model.bin', 556479170],
+  ['C:\\ProgramData\\HonorSDK\\Records\\abinstall\\2026_08_13_02_23_58.txt', 538237232],
+  ['…\\AppData\\Local\\NVIDIA\\DXCache\\23e0a919b2a828e1.nvph', 536870912],
+  ['C:\\Users\\JerryZhou\\Videos\\屏幕录制\\屏幕录制 2026-08-11 133335.mp4', 518962497],
+  ['…\\Google\\GoogleUpdater\\crx_cache\\288d525d4f5db1df…', 516472602],
+  ['C:\\Users\\JerryZhou\\Documents\\zotero\\CND7ZMF6.zip', 497242945],
+  ['…\\AppData\\Local\\Temp\\workbuddy-update-x64\\WorkBuddy-Setup-5.5.2…exe', 485401144],
+  ['…\\Programs\\Python\\Python313\\…\\torch\\lib\\cublasLt64_13.dll', 477896816],
+  ['…\\ollama\\cuda_v13\\cublasLt64_13.dll', 477894648],
+  ['…\\Comms\\MagicAI\\AISearch\\0\\index\\…\\_cn4d.tvd', 468521400],
+  ['…\\npm\\node_modules\\openclaw-cn\\…\\ggml-cuda.dll', 444685824]
+];
+document.getElementById('tbFiles').innerHTML = files.map((f, i) => `
+  <tr><td class="num" style="color:${i < 4 ? 'var(--warn)' : 'var(--fg)'}">${fmt(f[1])}</td>
+      <td class="path">${f[0]}</td></tr>`).join('');
+
+/* ---------- 命令 ---------- */
+document.getElementById('cmds').textContent =
+`# ⚠️ 以下命令我都没有执行，请自行确认后再逐条运行
+
+# ── 1. 用户临时文件（约 5.56 GB）
+Remove-Item "$env:LOCALAPPDATA\\Temp\\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+# ── 2. pip 缓存（约 7.52 GB）
+pip cache purge
+
+# ── 3. npm 缓存（约 3.32 GB）
+npm cache clean --force
+
+#   注意：AppData\Roaming\npm-cache 实际不存在，npm 全局包在 Roaming\npm（1.72 GB，
+#   删了会丢全局命令），不要清理它。真正可清的是上面这条命令对应的缓存。
+
+# ── 4. Windows 更新缓存（约 5.18 GB，需要管理员）
+Stop-Service wuauserv, bits -Force
+Remove-Item "C:\\Windows\\SoftwareDistribution\\Download\\*" -Recurse -Force -ErrorAction SilentlyContinue
+Start-Service wuauserv, bits
+
+# ── 5. 回收站（约 600 MB）
+Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+
+# ── 6. 崩溃转储 + 错误报告（约 140 MB）
+Remove-Item "$env:LOCALAPPDATA\\CrashDumps\\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item "C:\\ProgramData\\Microsoft\\Windows\\WER\\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+# ── 7. NVIDIA 着色器缓存（约 512 MB，自动重建）
+Remove-Item "$env:LOCALAPPDATA\\NVIDIA\\DXCache\\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+# ── 8. HonorSDK 安装日志（约 1.83 GB）
+Remove-Item "C:\\ProgramData\\HonorSDK\\Records\\abinstall\\*" -Force -ErrorAction SilentlyContinue
+
+# ── 9. 旧版 Node.js 备份（约 94 MB）
+Remove-Item "C:\\nodejs.bak-22.17.1" -Recurse -Force
+
+# ── 10. 官方组件清理（WinSxS，安全但耗时，需管理员）
+DISM /Online /Cleanup-Image /StartComponentCleanup /ResetBase
+
+# ── 11. 关闭休眠释放 12.6 GB（确认不用休眠再执行）
+powercfg -h off
+
+# ── 12. WSL 虚拟磁盘压缩（先关机）
+wsl --shutdown
+Optimize-VHD -Path "C:\\Users\\JerryZhou\\AppData\\Local\\wsl\\{d2b339e6-3ff7-48de-9bcf-b9cf10bb639e}\\ext4.vhdx" -Mode Full`;
+</script>
+</body>
+</html>

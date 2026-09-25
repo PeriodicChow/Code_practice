@@ -1,0 +1,16 @@
+# robot_lab 机器人实验室教学工程 - Python 依赖
+# 安装命令: pip install -r requirements.txt
+
+# === 基础依赖 ===
+numpy>=1.20.0
+opencv-python>=4.5.0
+
+# === YOLO 目标检测 ===
+ultralytics>=8.0.0
+
+# === 硬件 SDK（需要在真机环境下安装） ===
+# pyorbbecsdk    # Orbbec 深度相机 SDK（从 Orbbec 官方获取）
+# jkrc           # JAKA 机器人 SDK（从 JAKA 官方获取，.so 文件放入 libs/ 目录）
+
+# === 可选依赖 ===
+# torch           # PyTorch（ultralytics 会自动安装）

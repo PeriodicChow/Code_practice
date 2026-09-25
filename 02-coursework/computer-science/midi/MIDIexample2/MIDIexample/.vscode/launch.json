@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "运行 MIDI 程序",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/MusicDemo.exe",
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal"
+        }
+    ]
+}

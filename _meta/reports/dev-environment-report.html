@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本机编程环境与依赖统计报告</title>
+<style>
+  :root{
+    --bg:#0f1420; --bg2:#161d2e; --card:#1b2438; --card2:#212c44;
+    --line:#2e3b57; --fg:#e6ecf7; --fg2:#9fb0cd; --fg3:#6b7c9b;
+    --acc:#4f9cf9; --acc2:#38d39f; --warn:#f5b544; --err:#f2685f;
+    --mono:"JetBrains Mono","Cascadia Code",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 600px at 15% -10%,#1d2a45 0%,var(--bg) 55%) fixed;
+    color:var(--fg);
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    line-height:1.65; padding:32px 20px 80px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:32px}
+  h1{font-size:30px;letter-spacing:.5px;font-weight:650}
+  h1 .accent{color:var(--acc)}
+  .sub{color:var(--fg2);margin-top:10px;font-size:14px}
+  .sub code{font-family:var(--mono);color:var(--acc2)}
+
+  h2{
+    font-size:19px;margin:44px 0 16px;padding-left:12px;
+    border-left:4px solid var(--acc);font-weight:600;
+  }
+  h2 .n{color:var(--fg3);font-family:var(--mono);font-size:14px;margin-right:8px}
+  h3{font-size:15px;color:var(--acc2);margin:24px 0 10px;font-weight:600}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+  .stat{
+    background:linear-gradient(180deg,var(--card) 0%,var(--bg2) 100%);
+    border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+  }
+  .stat .k{font-size:12px;color:var(--fg3);text-transform:uppercase;letter-spacing:.9px}
+  .stat .v{font-size:19px;font-weight:600;font-family:var(--mono);margin-top:6px;word-break:break-all}
+  .stat .d{font-size:12px;color:var(--fg2);margin-top:6px}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:4px 0;margin-bottom:16px;overflow:hidden;
+  }
+  .card > .hd{
+    padding:12px 18px;background:var(--card2);border-bottom:1px solid var(--line);
+    font-weight:600;font-size:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .card > .bd{padding:8px 0}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:9px 18px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(46,59,87,.55)}
+  th{color:var(--fg3);font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:rgba(79,156,249,.05)}
+  td.name{color:var(--fg);font-weight:600;white-space:nowrap}
+  td.ver{font-family:var(--mono);color:var(--acc2);white-space:nowrap}
+  td.path{font-family:var(--mono);color:var(--fg2);font-size:12px;word-break:break-all}
+  td.note{color:var(--fg2);font-size:12.5px}
+
+  .tag{
+    display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;
+    font-weight:600;letter-spacing:.3px;border:1px solid transparent;white-space:nowrap;
+  }
+  .t-ok{background:rgba(56,211,159,.13);color:var(--acc2);border-color:rgba(56,211,159,.35)}
+  .t-no{background:rgba(107,124,155,.13);color:var(--fg3);border-color:rgba(107,124,155,.3)}
+  .t-warn{background:rgba(245,181,68,.13);color:var(--warn);border-color:rgba(245,181,68,.35)}
+  .t-err{background:rgba(242,104,95,.13);color:var(--err);border-color:rgba(242,104,95,.35)}
+  .t-info{background:rgba(79,156,249,.13);color:var(--acc);border-color:rgba(79,156,249,.35)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px}
+  .chip{
+    background:var(--bg2);border:1px solid var(--line);border-radius:8px;
+    padding:6px 12px;font-size:12.5px;font-family:var(--mono);color:var(--fg2);
+  }
+  .chip b{color:var(--fg);font-weight:600}
+  .chip.on{border-color:rgba(56,211,159,.4);color:var(--acc2)}
+  .chip.off{opacity:.5;text-decoration:line-through}
+
+  ul.list{padding:10px 18px 14px 38px}
+  ul.list li{font-size:13.5px;color:var(--fg2);margin:6px 0}
+  ul.list li b{color:var(--fg)}
+
+  .callout{
+    border-radius:10px;padding:14px 18px;margin:14px 0;font-size:13.5px;
+    border:1px solid;border-left-width:4px;
+  }
+  .c-warn{background:rgba(245,181,68,.07);border-color:rgba(245,181,68,.4);color:#f0d9a8}
+  .c-err{background:rgba(242,104,95,.07);border-color:rgba(242,104,95,.4);color:#f3c1bd}
+  .c-info{background:rgba(79,156,249,.07);border-color:rgba(79,156,249,.4);color:#c3d9f7}
+  .callout b{color:#fff}
+
+  .bar{height:6px;border-radius:3px;background:var(--bg2);overflow:hidden;margin-top:8px}
+  .bar > i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:var(--fg3);font-size:12.5px}
+  @media print{body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>本机编程环境与依赖<span class="accent">统计报告</span></h1>
+  <div class="sub">
+    主机 <code>LAPTOP-GDR9J9EA</code> · 用户 <code>JerryZhou</code> ·
+    采集时间 <code>2026-09-15 18:17</code> · 采集方式：注册表 / PATH 探测 / 各工具 <code>--version</code> / 包管理器清单<br>
+    <span class="tag t-ok">已更新</span> 处理记录更新于 <code>2026-09-15 18:45</code>：用户 PATH 清理、CMake/Ninja 纳入 PATH、conda 空环境删除
+  </div>
+</header>
+
+<!-- ================= 概览 ================= -->
+<h2><span class="n">01</span>总览</h2>
+<div class="grid">
+  <div class="stat"><div class="k">操作系统</div><div class="v">Windows 11 25H2</div><div class="d">Build 26200.9168 · AMD64</div></div>
+  <div class="stat"><div class="k">CPU / 内存</div><div class="v">x64 平台</div><div class="d">PROCESSOR_ARCHITECTURE=AMD64</div></div>
+  <div class="stat"><div class="k">GPU</div><div class="v">RTX 5060 Laptop</div><div class="d">8 GB 显存 · 驱动 616.64 · CUDA UMD 13.4</div></div>
+  <div class="stat"><div class="k">编程语言运行时</div><div class="v">4 类</div><div class="d">Python · Node.js · Java · .NET</div></div>
+  <div class="stat"><div class="k">C/C++ 工具链</div><div class="v">4 套</div><div class="d">MSVC · MSYS2 UCRT64 · TDM-GCC · Windows SDK</div></div>
+  <div class="stat"><div class="k">Python 解释器</div><div class="v">8 个</div><div class="d">3.9 ~ 3.14 并存</div></div>
+  <div class="stat"><div class="k">conda 环境</div><div class="v">6 个</div><div class="d">Miniconda3 + 5 个虚拟环境（已清理 2 个空环境）</div></div>
+  <div class="stat"><div class="k">编辑器 / IDE</div><div class="v">6 款</div><div class="d">VS 2026 · VS Code · Cursor · Trae · Dev-C++ · MATLAB</div></div>
+</div>
+
+<div class="callout c-warn">
+  <b>关于系统版本：</b>注册表 <code>ProductName</code> 显示为 “Windows 10 Home China”，但内部版本号为
+  <b>26200.9168</b>、显示版本 <b>25H2</b>，实际为 <b>Windows 11 25H2</b>（Windows 11 沿用了 Windows 10 的产品名字段，属已知现象）。
+</div>
+
+<!-- ================= 语言运行时 ================= -->
+<h2><span class="n">02</span>语言运行时与 SDK</h2>
+
+<div class="card">
+  <div class="hd">Python 生态 <span class="tag t-info">8 个解释器 / 3 个来源</span></div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>解释器</th><th>版本</th><th>位置</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="name">CPython（用户安装）</td><td class="ver">3.13.7</td><td class="path">%LOCALAPPDATA%\Programs\Python\Python313</td><td class="note">主力解释器 · pip 25.2 · 238 个 site-packages</td></tr>
+      <tr><td class="name">Python Launcher</td><td class="ver">3.13 / 3.12.11</td><td class="path">C:\Windows\py.exe</td><td class="note"><code>py -V:3.13</code>、<code>py -V:Astral/CPython3.12.11</code></td></tr>
+      <tr><td class="name">Miniconda base</td><td class="ver">3.13.5</td><td class="path">D:\miniconda3\python.exe</td><td class="note">conda 26.1.1 · 203 个包</td></tr>
+      <tr><td class="name">conda: cnn</td><td class="ver">3.14.5</td><td class="path">D:\miniconda3\envs\cnn</td><td class="note">185 包 · 含 cuda-cupti 13.2 / cuda-nvrtc 13.2</td></tr>
+      <tr><td class="name">conda: full_anaconda</td><td class="ver">3.12.12</td><td class="path">D:\miniconda3\envs\full_anaconda</td><td class="note">456 包 · 最完整的科学计算环境</td></tr>
+      <tr><td class="name">conda: lumi</td><td class="ver">3.12.13</td><td class="path">D:\miniconda3\envs\lumi</td><td class="note">20 包 · 轻量环境</td></tr>
+      <tr><td class="name">conda: gesture</td><td class="ver">3.10.20</td><td class="path">D:\miniconda3\envs\gesture</td><td class="note">20 包 · 轻量环境</td></tr>
+      <tr><td class="name">conda: mental_health_agent</td><td class="ver">3.9.25</td><td class="path">D:\miniconda3\envs\mental_health_agent</td><td class="note">20 包 · 最旧版本</td></tr>
+      <tr><td class="name">MSYS2 UCRT64</td><td class="ver">3.12.11</td><td class="path">C:\msys64\ucrt64\bin\python.exe</td><td class="note">位于 PATH 前段，<b>默认 <code>python</code> 命令指向它</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="callout c-info">
+  <b>PATH 优先级提示：</b>PATH 中 <code>C:\msys64\ucrt64\bin</code> 排在
+  <code>%LOCALAPPDATA%\...\Python313</code> 之前，因此终端里直接执行 <code>python</code> 得到的是
+  <b>MSYS2 的 3.12.11</b>，而不是用户安装的 3.13.7。若需 3.13.7 请使用 <code>py -3.13</code> 或绝对路径。
+</div>
+
+<div class="card">
+  <div class="hd">Node.js / 前端 <span class="tag t-info">1 套运行时</span></div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>组件</th><th>版本</th><th>位置</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Node.js</td><td class="ver">v22.23.2</td><td class="path">C:\nodejs\node.exe</td><td class="note">注册表登记为 22.17.1（原地升级导致版本记录不一致）</td></tr>
+      <tr><td class="name">npm</td><td class="ver">11.17.0</td><td class="path">C:\nodejs\npm.cmd</td><td class="note">全局包目录 %APPDATA%\npm</td></tr>
+      <tr><td class="name">pnpm</td><td class="ver">12.4.1</td><td class="path">%APPDATA%\npm\pnpm.ps1</td><td class="note">全局安装</td></tr>
+      <tr><td class="name">corepack</td><td class="ver">0.34.6</td><td class="path">C:\nodejs\corepack.cmd</td><td class="note">可启用 yarn 等其他包管理器</td></tr>
+      <tr><td class="name">yarn / bun / deno</td><td class="ver">—</td><td class="path">—</td><td class="note"><span class="tag t-no">未安装</span></td></tr>
+      <tr><td class="name">TypeScript（tsc）</td><td class="ver">—</td><td class="path">—</td><td class="note"><span class="tag t-no">无全局安装</span>（可经项目本地依赖使用）</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">Java / JVM</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>组件</th><th>版本</th><th>位置</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Oracle JDK 21</td><td class="ver">21.0.7+8-LTS</td><td class="path">C:\Program Files\Java\jdk-21</td><td class="note">PATH 上的 <code>javac</code> 实际来源；<code>java</code> 经 javapath 转发</td></tr>
+      <tr><td class="name">Oracle JDK 17</td><td class="ver">17.0.7</td><td class="path">C:\Program Files\Java\jdk-17</td><td class="note">注册表 JavaSoft\Java Development Kit\17.0.7</td></tr>
+      <tr><td class="name">Oracle JRE 8</td><td class="ver">1.8.0_281</td><td class="path">C:\Program Files\Java\jre1.8.0_281</td><td class="note">旧版运行时（无 JDK）</td></tr>
+      <tr><td class="name">Microsoft Build of OpenJDK</td><td class="ver">21.0.7+6</td><td class="path">—</td><td class="note">已登记安装，供 VS/JVM 工具使用</td></tr>
+      <tr><td class="name">javapath 垫片</td><td class="ver">—</td><td class="path">C:\Program Files (x86)\Common Files\Oracle\Java\javapath<br>C:\Program Files\Common Files\Oracle\Java\javapath</td><td class="note">PATH 第 2、3 项；含 java/javac/javaw/jshell</td></tr>
+      <tr><td class="name">Maven / Gradle</td><td class="ver">—</td><td class="path">—</td><td class="note"><span class="tag t-no">未安装</span></td></tr>
+      <tr><td class="name">JAVA_HOME</td><td class="ver">未设置</td><td class="path">—</td><td class="note"><span class="tag t-warn">缺失</span> 部分构建工具会依赖该变量</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">.NET</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>组件</th><th>版本</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="name">.NET Host</td><td class="ver">8.0.28</td><td class="note">C:\Program Files\dotnet\dotnet.exe</td></tr>
+      <tr><td class="name">Microsoft.NETCore.App</td><td class="ver">8.0.28 · 6.0.28</td><td class="note">运行时已装</td></tr>
+      <tr><td class="name">Microsoft.AspNetCore.App</td><td class="ver">8.0.28</td><td class="note">运行时已装</td></tr>
+      <tr><td class="name">Microsoft.WindowsDesktop.App</td><td class="ver">8.0.28 · 6.0.28</td><td class="note">WPF / WinForms 运行时</td></tr>
+      <tr><td class="name">.NET SDK</td><td class="ver">无</td><td class="note"><span class="tag t-err">缺失</span> <code>dotnet --list-sdks</code> 报告 “No SDKs were found”，<b>无法用 CLI 编译 C# 项目</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">其他语言运行时</div>
+  <div class="chips">
+    <span class="chip off">Go</span>
+    <span class="chip off">Rust / cargo</span>
+    <span class="chip off">Ruby</span>
+    <span class="chip off">PHP</span>
+    <span class="chip off">Lua</span>
+    <span class="chip off">Julia</span>
+    <span class="chip off">Swift</span>
+    <span class="chip off">Kotlin</span>
+    <span class="chip on">Perl（仅 MSYS2 内部 5.38.4）</span>
+    <span class="chip on">GNU R（仅 PowerShell Alias，非真实安装）</span>
+  </div>
+</div>
+
+<!-- ================= 编译工具链 ================= -->
+<h2><span class="n">03</span>C / C++ 编译工具链</h2>
+
+<div class="card">
+  <div class="hd">MSVC（Visual Studio 2026）<span class="tag t-ok">主力 Windows 原生工具链</span></div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>组件</th><th>版本</th><th>路径</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Visual Studio Community 2026</td><td class="ver">18.7.0 (18.7.11903.348)</td><td class="path">D:\Microsoft Visual Studio\18\Community</td></tr>
+      <tr><td class="name">MSVC 编译器工具集</td><td class="ver">14.51.36231</td><td class="path">...\VC\Tools\MSVC\14.51.36231\bin\Hostx64\x64\cl.exe</td></tr>
+      <tr><td class="name">MSBuild</td><td class="ver">18.7</td><td class="path">...\MSBuild\Current\Bin\MSBuild.exe</td></tr>
+      <tr><td class="name">vcvars64.bat</td><td class="ver">—</td><td class="path">...\VC\Auxiliary\Build\vcvars64.bat</td></tr>
+      <tr><td class="name">CMake（VS 内置）</td><td class="ver">4.3.1-msvc1</td><td class="path">...\CMake\CMake\bin\cmake.exe <span class="tag t-ok">已加入 PATH</span></td></tr>
+      <tr><td class="name">Ninja（VS 内置）</td><td class="ver">1.13.2</td><td class="path">...\CMake\Ninja\ninja.exe <span class="tag t-ok">已加入 PATH</span></td></tr>
+      <tr><td class="name">VC++ 运行库</td><td class="ver">14.51.36247</td><td class="path">2005 → 2022 各版本 Redistributable 齐全</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="callout c-info">
+  <b>CMake / Ninja 已纳入 PATH（本次修复）：</b>Visual Studio 内置的 <b>CMake 4.3.1-msvc1</b> 与
+  <b>Ninja 1.13.2</b> 已加入用户级 PATH，终端中可直接调用 <code>cmake</code> / <code>ctest</code> /
+  <code>cpack</code> / <code>ninja</code>。<br>
+  注意：<code>cmake</code> 需配合编译器使用，构建 C++ 时仍需在 “x64 Native Tools Command Prompt”
+  中运行（或先执行 <code>vcvars64.bat</code>）才能找到 <code>cl.exe</code>；若使用 GCC 则配置
+  <code>-G "MinGW Makefiles"</code>。MSYS2 中仍未安装 <code>cmake</code> / <code>ninja</code> 包。
+</div>
+
+<div class="card">
+  <div class="hd">MSYS2 / MinGW-w64（UCRT64）<span class="tag t-ok">GNU 工具链</span></div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>组件</th><th>版本</th><th>位置</th></tr></thead>
+    <tbody>
+      <tr><td class="name">MSYS2</td><td class="ver">20250622</td><td class="path">C:\msys64（已装 144 个包）</td></tr>
+      <tr><td class="name">GCC / G++</td><td class="ver">15.1.0 (Rev5, MSYS2)</td><td class="path">C:\msys64\ucrt64\bin\gcc.exe（<b>在 PATH 上</b>）</td></tr>
+      <tr><td class="name">binutils</td><td class="ver">2.44</td><td class="path">ld.exe · ar.exe · windres.exe</td></tr>
+      <tr><td class="name">GDB</td><td class="ver">16.3（含 multiarch）</td><td class="path">C:\msys64\ucrt64\bin\gdb.exe</td></tr>
+      <tr><td class="name">GNU Make</td><td class="ver">4.4.1</td><td class="path">mingw32-make.exe 在 ucrt64；<code>make.exe</code> 位于 C:\msys64\usr\bin（<b>不在 PATH</b>）</td></tr>
+      <tr><td class="name">pkgconf</td><td class="ver">2.5.0</td><td class="path">C:\msys64\ucrt64\bin\pkg-config.exe</td></tr>
+      <tr><td class="name">OpenSSL</td><td class="ver">3.5.0</td><td class="path">C:\msys64\ucrt64\bin\openssl.exe</td></tr>
+      <tr><td class="name">SQLite3</td><td class="ver">3.50.1</td><td class="path">C:\msys64\ucrt64\bin\sqlite3.exe</td></tr>
+      <tr><td class="name">pacman</td><td class="ver">6.1.0</td><td class="path">C:\msys64\usr\bin\pacman.exe（<b>不在 PATH</b>，需经 MSYS2 Shell 调用）</td></tr>
+      <tr><td class="name">clang64 / mingw64 / mingw32</td><td class="ver">目录存在，无编译器</td><td class="path">仅 ucrt64 子系统安装了 GCC</td></tr>
+      <tr><td class="name">CMake / Ninja</td><td class="ver">—</td><td class="path"><span class="tag t-no">MSYS2 中未安装</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">TDM-GCC（Dev-C++ 5.11 自带）<span class="tag t-warn">旧版，未在 PATH</span></div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>组件</th><th>版本</th><th>位置</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Dev-C++</td><td class="ver">5.11</td><td class="path">D:\Dev-Cpp\devcpp.exe</td></tr>
+      <tr><td class="name">GCC</td><td class="ver">4.9.2 (tdm64-1)</td><td class="path">D:\Dev-Cpp\MinGW64\bin\gcc.exe</td></tr>
+      <tr><td class="name">目标三元组</td><td class="ver">x86_64-w64-mingw32</td><td class="path">x86_64-w64-mingw32-gcc-4.9.2.exe</td></tr>
+      <tr><td class="name">附带的 GDB / Make / windres</td><td class="ver">—</td><td class="path">D:\Dev-Cpp\MinGW64\bin</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">Windows SDK</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>组件</th><th>版本</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Windows SDK</td><td class="ver">10.1.26100.8249</td><td class="note">x64 / x86 / ARM64 的 Headers、Libs、Tools 全量安装</td></tr>
+      <tr><td class="name">Include 版本目录</td><td class="ver">26100 · 17134 · 16299 · 15063 · 14393</td><td class="note">C:\Program Files (x86)\Windows Kits\10\Include</td></tr>
+      <tr><td class="name">Windows Performance Toolkit</td><td class="ver">10.1.26100.8249</td><td class="note">目录在 PATH 上</td></tr>
+      <tr><td class="name">MSI / WinAppDeploy / 认证工具</td><td class="ver">10.1.26100.8249</td><td class="note">随 SDK 安装</td></tr>
+      <tr><td class="name">Clang / LLVM（系统级）</td><td class="ver">—</td><td class="note"><span class="tag t-no">未安装</span>（Cursor 装有 clangd 扩展，但不含编译器）</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ================= 包管理器 ================= -->
+<h2><span class="n">04</span>包管理器与依赖管理</h2>
+
+<div class="card">
+  <div class="hd">包管理器清单</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>工具</th><th>版本</th><th>用途</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td class="name">conda</td><td class="ver">26.1.1</td><td class="note">Python 环境 / 科学计算包</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">pip</td><td class="ver">25.2 (py3.13) / 25.1 (conda base)</td><td class="note">Python 包</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">uv</td><td class="ver">0.8.17</td><td class="note">极速 Python 环境与包管理（Astral）</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">npm</td><td class="ver">11.17.0</td><td class="note">Node 包</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">pnpm</td><td class="ver">12.4.1</td><td class="note">Node 包（磁盘友好）</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">corepack</td><td class="ver">0.34.6</td><td class="note">Node 包管理器版本管理</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">pacman</td><td class="ver">6.1.0</td><td class="note">MSYS2 包管理（需 MSYS2 Shell）</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">winget</td><td class="ver">—</td><td class="note">Windows 应用包管理</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">mamba / micromamba</td><td class="ver">—</td><td class="note">conda 的高速替代</td><td><span class="tag t-no">未装</span>（含 libmamba solver）</td></tr>
+      <tr><td class="name">yarn / bun / deno</td><td class="ver">—</td><td class="note">Node/JS 运行时与包管理</td><td><span class="tag t-no">未装</span></td></tr>
+      <tr><td class="name">pipx / poetry / pyenv</td><td class="ver">—</td><td class="note">Python 应用与项目管理</td><td><span class="tag t-no">未装</span></td></tr>
+      <tr><td class="name">vcpkg / Conan</td><td class="ver">—</td><td class="note">C++ 包管理</td><td><span class="tag t-no">未装</span></td></tr>
+      <tr><td class="name">Maven / Gradle / NuGet(SDK)</td><td class="ver">—</td><td class="note">JVM / .NET 构建</td><td><span class="tag t-no">未装</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<h3>全局 npm 包（%APPDATA%\npm）</h3>
+<div class="chips">
+  <span class="chip"><b>@deepseek-ai/dsh</b> 0.1.1-rc.2</span>
+  <span class="chip"><b>npm</b> 11.17.0</span>
+  <span class="chip"><b>pnpm</b> 12.4.1</span>
+  <span class="chip"><b>prettier</b> 3.8.1</span>
+  <span class="chip"><b>picgo</b> 1.5.9</span>
+  <span class="chip"><b>openclaw-cn</b> 2026.2.3</span>
+</div>
+
+<h3>Python 3.13.7 关键第三方库（pip list 摘录）</h3>
+<div class="card"><div class="chips">
+  <span class="chip"><b>torch</b> 2.11.0+cu130</span>
+  <span class="chip"><b>torchvision</b> 0.26.0+cu130</span>
+  <span class="chip"><b>numpy</b> 2.3.3</span>
+  <span class="chip"><b>pandas</b> 2.3.3</span>
+  <span class="chip"><b>matplotlib</b> 3.10.6</span>
+  <span class="chip"><b>sympy</b> 1.14.0</span>
+  <span class="chip"><b>networkx</b> 3.6.1</span>
+  <span class="chip"><b>pillow</b> 11.3.0</span>
+  <span class="chip"><b>imageio</b> 2.37.0</span>
+  <span class="chip"><b>pydantic</b> 2.13.4</span>
+  <span class="chip"><b>httpx</b> 0.28.1</span>
+  <span class="chip"><b>requests</b> 2.32.5</span>
+  <span class="chip"><b>beautifulsoup4</b> 4.14.3</span>
+  <span class="chip"><b>jieba</b> 0.42.1</span>
+  <span class="chip"><b>wordcloud</b> 1.9.4</span>
+  <span class="chip"><b>pyecharts</b> 2.1.0</span>
+  <span class="chip"><b>swanlab</b> 0.7.19</span>
+  <span class="chip"><b>protobuf</b> 6.33.6</span>
+  <span class="chip"><b>pyinstaller</b> 6.15.0</span>
+  <span class="chip"><b>uv</b> 0.8.17</span>
+  <span class="chip"><b>nvidia-ml-py</b> 13.595.45</span>
+  <span class="chip"><b>psutil</b> 7.0.0</span>
+  <span class="chip"><b>pywin32</b> 311</span>
+  <span class="chip"><b>jupyterlab</b> 4.5.7</span>
+  <span class="chip"><b>notebook</b> 7.5.6</span>
+  <span class="chip"><b>ipykernel</b> 7.2.0</span>
+  <span class="chip"><b>ipython</b> 9.4.0</span>
+  <span class="chip">… 共 238 个包</span>
+</div></div>
+
+<div class="callout c-info">
+  <b>GPU 加速实测：</b>用户环境 Python 3.13.7 中 <code>torch.cuda.is_available() == True</code>，
+  编译时 CUDA 版本 <b>13.0</b>，识别设备 <b>NVIDIA GeForce RTX 5060 Laptop GPU</b>。
+  系统<b>未安装独立 CUDA Toolkit</b>（无 <code>nvcc</code>），但 conda <code>cnn</code> 环境含 cuda-cupti / cuda-nvrtc 13.2 运行时组件。
+</div>
+
+<!-- ================= GPU ================= -->
+<h2><span class="n">05</span>GPU 与加速环境</h2>
+<div class="card">
+  <div class="hd">NVIDIA 环境</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>项目</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td class="name">GPU 型号</td><td class="ver">NVIDIA GeForce RTX 5060 Laptop GPU</td></tr>
+      <tr><td class="name">显存</td><td class="ver">8151 MiB（约 8 GB）</td></tr>
+      <tr><td class="name">驱动 / KMD</td><td class="ver">616.64</td></tr>
+      <tr><td class="name">CUDA UMD 版本</td><td class="ver">13.4</td></tr>
+      <tr><td class="name">计算模式</td><td class="ver">Default（WDDM 驱动模型）</td></tr>
+      <tr><td class="name">nvidia-smi</td><td class="path">C:\Windows\System32\nvidia-smi.exe</td></tr>
+      <tr><td class="name">nvcc（CUDA Toolkit）</td><td class="note"><span class="tag t-no">未安装</span></td></tr>
+      <tr><td class="name">NVIDIA 软件栈</td><td class="note">NVIDIA App 11.0.9.251 · PhysX 9.26.0703 · Container Runtime 1.51（已支持 Docker GPU 直通）</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ================= 编辑器 / IDE ================= -->
+<h2><span class="n">06</span>编辑器与 IDE</h2>
+<div class="card">
+  <div class="hd">已安装的代码编辑器 / IDE</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>名称</th><th>版本</th><th>位置</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Visual Studio Community 2026</td><td class="ver">18.7.0</td><td class="path">D:\Microsoft Visual Studio\18\Community</td><td class="note">C++ / .NET 桌面与 Windows 开发</td></tr>
+      <tr><td class="name">VS Code</td><td class="ver">1.137.0 (x64)</td><td class="path">%LOCALAPPDATA%\Programs\Microsoft VS Code</td><td class="note">32 个扩展，Python/C++/Jupyter/远程为主</td></tr>
+      <tr><td class="name">Cursor</td><td class="ver">2.6.19</td><td class="path">D:\cursor</td><td class="note">AI IDE · 32 个扩展（含 clangd、LLDB）</td></tr>
+      <tr><td class="name">Trae CN</td><td class="ver">3.3.70</td><td class="path">d:\Trae CN</td><td class="note">AI IDE · 25 个扩展</td></tr>
+      <tr><td class="name">Dev-C++</td><td class="ver">5.11</td><td class="path">D:\Dev-Cpp</td><td class="note">轻量 C/C++ IDE，自带 TDM-GCC 4.9.2</td></tr>
+      <tr><td class="name">MATLAB</td><td class="ver">R2025a (25.1)</td><td class="path">D:\Matlab2025a</td><td class="note">含 Simulink、Polyspace、RTW；MATLAB Java 运行时</td></tr>
+      <tr><td class="name">Obsidian</td><td class="ver">1.8.10</td><td class="path">D:\Obsidian</td><td class="note">笔记 / Markdown</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">VS Code 扩展（Python / C++ / 远程）</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>分类</th><th>扩展</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Python</td><td class="note">ms-python.python 2026.4.0 · pylance 2026.3.1 · debugpy 2026.6.0 · python-envs 1.36.0 · 环境管理器包 · 缩进 · autodocstring</td></tr>
+      <tr><td class="name">Jupyter</td><td class="note">ms-toolsai.jupyter 2025.9.1 及 keymap / renderers / cell-tags / slideshow</td></tr>
+      <tr><td class="name">C/C++</td><td class="note">ms-vscode.cpptools 1.34.4 · cpptools-extension-pack · cmake-tools 1.24.42 · cpp-devtools</td></tr>
+      <tr><td class="name">远程 / 容器</td><td class="note">remote-containers 0.469.0 · remote-wsl 0.104.3 · remote-server · remote-explorer</td></tr>
+      <tr><td class="name">Web / 其他</td><td class="note">Django · Live Server · Markdown All in One · Markdown Preview Enhanced · Rainbow CSV · DB Viewer · Code Runner · 简体中文语言包</td></tr>
+      <tr><td class="name">AI</td><td class="note">vizards.deepseek-v4-for-copilot 0.9.1</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ================= 其他开发工具 ================= -->
+<h2><span class="n">07</span>版本控制、容器与其他开发工具</h2>
+<div class="card">
+  <div class="hd">开发辅助工具</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>工具</th><th>版本</th><th>位置</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Git</td><td class="ver">2.50.1.windows.1</td><td class="path">D:\Git\cmd\git.exe</td><td><span class="tag t-ok">可用</span> <span class="note">global: safe.directory=*</span></td></tr>
+      <tr><td class="name">Docker Desktop</td><td class="ver">4.77.0（引擎 29.5.3）</td><td class="path">C:\Program Files\Docker\Docker\resources\bin</td><td><span class="tag t-warn">已装未运行</span> <span class="note">docker info 无响应，守护进程未启动</span></td></tr>
+      <tr><td class="name">kubectl</td><td class="ver">v1.34.1</td><td class="path">...\Docker\...\bin\kubectl.exe</td><td><span class="tag t-ok">已装</span> <span class="note">Kustomize v5.7.1</span></td></tr>
+      <tr><td class="name">WSL</td><td class="ver">2.6.3</td><td class="path">C:\Windows\system32\wsl.exe</td><td><span class="tag t-warn">无可用发行版</span> <span class="note">wsl -l 返回访问被拒绝/无分发</span></td></tr>
+      <tr><td class="name">OpenSSH</td><td class="ver">系统组件</td><td class="path">C:\Windows\System32\OpenSSH\ssh.exe</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">WinSCP</td><td class="ver">6.5.3</td><td class="path">—</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">Pandoc</td><td class="ver">3.8.3</td><td class="path">C:\Program Files (x86)\pandoc-3.8.2\...</td><td><span class="tag t-warn">PATH 项指向 .exe 文件而非目录</span></td></tr>
+      <tr><td class="name">PowerToys</td><td class="ver">0.97.2</td><td class="path">%LOCALAPPDATA%\PowerToys</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">usbipd-win</td><td class="ver">5.3.0</td><td class="path">C:\Program Files\usbipd-win\</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">7-Zip / WinRAR</td><td class="ver">25.00 / 7.13</td><td class="path">—</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">Windows Terminal</td><td class="ver">—</td><td class="path">%LOCALAPPDATA%\Microsoft\WindowsApps\wt.exe</td><td><span class="tag t-ok">已装</span></td></tr>
+      <tr><td class="name">PowerShell</td><td class="ver">5.1.26100.9168 (Desktop)</td><td class="path">C:\Windows\System32\WindowsPowerShell\v1.0</td><td><span class="tag t-warn">无 PowerShell 7（pwsh）</span></td></tr>
+      <tr><td class="name">Subversion / Mercurial</td><td class="ver">—</td><td class="path">—</td><td><span class="tag t-no">未装</span></td></tr>
+      <tr><td class="name">数据库客户端</td><td class="ver">SQLite 3.50.1</td><td class="path">C:\msys64\ucrt64\bin\sqlite3.exe</td><td><span class="tag t-warn">无 MySQL / PostgreSQL / Redis / MongoDB</span></td></tr>
+      <tr><td class="name">网络工具</td><td class="ver">Tailscale 1.102.4 · ZeroTier 1.16.1 · OpenVPN 3.3.6 · Syncthing</td><td class="path">—</td><td><span class="tag t-ok">已装</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ================= PATH ================= -->
+<h2><span class="n">08</span>PATH 与安装根目录分布</h2>
+
+<div class="card">
+  <div class="hd">开发相关安装盘符分布</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>盘符 / 目录</th><th>承载内容</th></tr></thead>
+    <tbody>
+      <tr><td class="name">C:\msys64</td><td class="note">MSYS2 20250622 · UCRT64 GCC 15.1.0 / GDB / Make / OpenSSL / SQLite / Python 3.12</td></tr>
+      <tr><td class="name">C:\nodejs</td><td class="note">Node.js 22.23.2 · npm · corepack</td></tr>
+      <tr><td class="name">C:\Program Files\Java</td><td class="note">jdk-21 · jdk-17 · jre1.8.0_281</td></tr>
+      <tr><td class="name">C:\Program Files\dotnet</td><td class="note">.NET 运行时 6.0.28 / 8.0.28（无 SDK）</td></tr>
+      <tr><td class="name">C:\Program Files (x86)\Windows Kits\10</td><td class="note">Windows SDK 10.1.26100.8249 · WPT</td></tr>
+      <tr><td class="name">C:\Program Files\Docker</td><td class="note">Docker Desktop 4.77.0 · docker / kubectl CLI</td></tr>
+      <tr><td class="name">%LOCALAPPDATA%\Programs\Python\Python313</td><td class="note">CPython 3.13.7 + pip 25.2 + uv 0.8.17 + 238 包</td></tr>
+      <tr><td class="name">D:\miniconda3</td><td class="note">Miniconda3 25.5.1-1 · conda 26.1.1 · base + 6 个环境</td></tr>
+      <tr><td class="name">D:\Microsoft Visual Studio\18</td><td class="note">Visual Studio Community 2026 18.7.0 · MSVC 14.51 · CMake · Ninja</td></tr>
+      <tr><td class="name">D:\Dev-Cpp</td><td class="note">Dev-C++ 5.11 · TDM-GCC 4.9.2</td></tr>
+      <tr><td class="name">D:\Git</td><td class="note">Git 2.50.1</td></tr>
+      <tr><td class="name">D:\Matlab2025a</td><td class="note">MATLAB R2025a 25.1</td></tr>
+      <tr><td class="name">D:\cursor · d:\Trae CN</td><td class="note">AI 编辑器</td></tr>
+      <tr><td class="name">D:\Code_practice</td><td class="note">当前工作目录</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">PATH 结构（用户级已清理；当前合计 37 项，待系统级清理后为 35 项）<span class="tag t-ok">已清理</span></div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>范围</th><th>条目数</th><th>本次变更</th></tr></thead>
+    <tbody>
+      <tr><td class="name">用户 PATH（HKCU）</td><td class="ver">13 → 11</td><td class="note">删除 2 个无效条目、2 个重复条目；新增 CMake 与 Ninja 两个目录</td></tr>
+      <tr><td class="name">系统 PATH（HKLM）</td><td class="ver">26 → 24 <span class="tag t-warn">待管理员执行</span></td><td class="note">待删除 pandoc 文件型无效项、msys64 ucrt64 bin 重复项</td></tr>
+      <tr><td class="name">合计（当前 37）</td><td class="ver">39 → 35</td><td class="note">用户级改动已生效并已广播 WM_SETTINGCHANGE</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">用户 PATH 明细（已修复）</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>#</th><th>条目</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td class="ver">1</td><td class="path">d:\Trae CN\bin</td><td><span class="tag t-ok">有效</span></td></tr>
+      <tr><td class="ver">2</td><td class="path">%LOCALAPPDATA%\Programs\Python\Python313\</td><td><span class="tag t-ok">有效</span></td></tr>
+      <tr><td class="ver">3</td><td class="path">D:\HMCL\bin</td><td><span class="tag t-ok">有效</span></td></tr>
+      <tr><td class="ver">4</td><td class="path">%LOCALAPPDATA%\Microsoft\WindowsApps</td><td><span class="tag t-ok">有效</span></td></tr>
+      <tr><td class="ver">5</td><td class="path">%LOCALAPPDATA%\Programs\Microsoft VS Code\bin</td><td><span class="tag t-ok">有效</span></td></tr>
+      <tr><td class="ver">6</td><td class="path">%APPDATA%\npm</td><td><span class="tag t-ok">有效</span></td></tr>
+      <tr><td class="ver">7</td><td class="path">%LOCALAPPDATA%\Pandoc\</td><td><span class="tag t-ok">有效</span> <span class="note">提供 pandoc 3.8.3</span></td></tr>
+      <tr><td class="ver">8</td><td class="path">%LOCALAPPDATA%\Microsoft\WinGet\Packages\...\edit-1.2.1-x86_64-windows</td><td><span class="tag t-ok">有效</span></td></tr>
+      <tr><td class="ver">9</td><td class="path">%LOCALAPPDATA%\PowerToys\DSCModules\</td><td><span class="tag t-ok">有效</span></td></tr>
+      <tr><td class="ver">10</td><td class="path">...\CommonExtensions\Microsoft\CMake\CMake\bin</td><td><span class="tag t-info">本次新增</span> cmake / ctest / cpack 4.3.1-msvc1</td></tr>
+      <tr><td class="ver">11</td><td class="path">...\CommonExtensions\Microsoft\CMake\Ninja</td><td><span class="tag t-info">本次新增</span> ninja 1.13.2</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">本次从用户 PATH 删除的条目</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>条目</th><th>原因</th></tr></thead>
+    <tbody>
+      <tr><td class="path">D:\工具\mc.exe</td><td class="note"><span class="tag t-err">无效</span> PATH 项指向文件而非目录，不参与命令解析</td></tr>
+      <tr><td class="path">%APPDATA%\npm\opencode.ps1</td><td class="note"><span class="tag t-err">无效</span> 同样指向文件而非目录</td></tr>
+      <tr><td class="path">C:\msys64\ucrt64\bin</td><td class="note"><span class="tag t-warn">重复</span> 系统 PATH 已包含同一目录</td></tr>
+      <tr><td class="path">%LOCALAPPDATA%\Programs\Python\Python313\Scripts\</td><td class="note"><span class="tag t-warn">重复</span> 系统 PATH 已包含同一目录</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ================= 问题清单 ================= -->
+<h2><span class="n">09</span>问题处理状态</h2>
+
+<div class="card">
+  <div class="hd">处理结果一览</div>
+  <div class="bd">
+  <table>
+    <thead><tr><th>问题</th><th>处理</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="name">用户 PATH 无效条目 ×2<br><span class="note">D:\工具\mc.exe<br>%APPDATA%\npm\opencode.ps1</span></td>
+        <td class="note">已从 HKCU\Environment 删除，并广播 WM_SETTINGCHANGE</td>
+        <td><span class="tag t-ok">已完成</span></td>
+      </tr>
+      <tr>
+        <td class="name">用户 PATH 重复条目 ×2<br><span class="note">C:\msys64\ucrt64\bin<br>...\Python313\Scripts\</span></td>
+        <td class="note">已删除（系统 PATH 中已有同目录）</td>
+        <td><span class="tag t-ok">已完成</span></td>
+      </tr>
+      <tr>
+        <td class="name">CMake / Ninja 未纳入 PATH</td>
+        <td class="note">已将 VS 内置 CMake 4.3.1-msvc1 与 Ninja 1.13.2 加入用户 PATH，实测 <code>cmake</code>/<code>ctest</code>/<code>cpack</code>/<code>ninja</code> 均可解析</td>
+        <td><span class="tag t-ok">已完成</span></td>
+      </tr>
+      <tr>
+        <td class="name">conda 空环境 ×2<br><span class="note">aipractice · chatsummary</span></td>
+        <td class="note">已用 <code>conda env remove</code> 删除，目录与 environments.txt 均已清干净</td>
+        <td><span class="tag t-ok">已完成</span></td>
+      </tr>
+      <tr>
+        <td class="name">系统 PATH 无效条目<br><span class="note">...\pandoc-3.8.2\pandoc-3.8.2\pandoc.exe</span></td>
+        <td class="note">待管理员执行 <code>fix-machine-level.ps1</code></td>
+        <td><span class="tag t-warn">待执行（需管理员）</span></td>
+      </tr>
+      <tr>
+        <td class="name">系统 PATH 重复条目<br><span class="note">C:\msys64\ucrt64\bin\ ↔ C:\msys64\ucrt64\bin</span></td>
+        <td class="note">同上，脚本会按“去尾斜杠归一化”识别并去重</td>
+        <td><span class="tag t-warn">待执行（需管理员）</span></td>
+      </tr>
+      <tr>
+        <td class="name">Node 注册表版本不一致<br><span class="note">注册表 22.17.1 / 实际 22.23.2</span></td>
+        <td class="note">同上，脚本会下载并安装 22.23.2 的 MSI，安装目录保持 C:\nodejs</td>
+        <td><span class="tag t-warn">待执行（需管理员）</span></td>
+      </tr>
+      <tr>
+        <td class="name">Docker</td>
+        <td class="note">按你的决定<b>不做改动</b>（已安装但守护进程未运行）</td>
+        <td><span class="tag t-no">不处理</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="callout c-info">
+  <b>执行待办项：</b>以管理员身份运行 PowerShell，然后执行<br>
+  <code>powershell -ExecutionPolicy Bypass -File D:\Code_practice\fix-machine-level.ps1</code><br>
+  脚本会自动备份系统 PATH、按归一化去重、并重装 Node MSI（带详细日志与版本校验）。
+</div>
+
+<h3>仍建议关注（本次未处理）</h3>
+
+<div class="callout c-warn">
+  <b><code>python</code> 命令与预期不一致</b><br>
+  用户 PATH 中 <code>C:\msys64\ucrt64\bin\</code> 仍排在 Python313 之前（该项由系统 PATH 提供，需管理员才能调整），
+  因此裸 <code>python</code> 仍是 MSYS2 的 3.12.11。建议统一使用 <code>py -3.13</code>，
+  或在 MSYS2 中把 Python 相关目录后移。
+</div>
+
+<div class="callout c-warn">
+  <b>缺少 .NET SDK</b><br>
+  已装 VS 2026 与 .NET 8 运行时，但 <code>dotnet --list-sdks</code> 为空，无法用 CLI 创建/编译 C# 项目。
+  如需 CLI 开发，安装 “.NET 8.0 SDK” 或在 VS 安装器中勾选 “.NET 桌面开发” 工作负载。
+</div>
+
+<div class="callout c-warn">
+  <b><code>make</code> 不在 PATH</b><br>
+  GNU Make 4.4.1 存在于 <code>C:\msys64\usr\bin</code>（不在 PATH），UCRT64 中仅有 <code>mingw32-make.exe</code>。
+  使用 CMake + GCC 时请选 <code>-G "MinGW Makefiles"</code> 或改用 Ninja。
+</div>
+
+<div class="callout c-info">
+  <b>其他缺失项</b><br>
+  <code>JAVA_HOME</code> 未设置；无 PowerShell 7；WSL 无可用发行版；Docker 守护进程未运行；
+  无独立 CUDA Toolkit（<code>nvcc</code>），但 torch 自带 CUDA 13.0 运行时可用。
+</div>
+
+<div class="callout c-info">
+  <b>回滚方式：</b>所有改动前均已备份至 <code>D:\Code_practice\backup\</code>
+  （<code>user-PATH-*.txt</code>、<code>machine-PATH-*.txt</code>、<code>conda-envs-*.json</code>、
+  <code>node-uninstall-key-*.txt</code>）。如需还原用户 PATH，把备份文件内容写回
+  <code>HKCU:\Environment</code> 的 <code>Path</code>（类型 REG_SZ）即可。
+</div>
+
+<h3>能力矩阵速览</h3>
+<div class="card"><div class="chips">
+  <span class="chip on">Python 开发</span>
+  <span class="chip on">科学计算 / 数据分析</span>
+  <span class="chip on">深度学习（CUDA 可用）</span>
+  <span class="chip on">Node.js / 前端</span>
+  <span class="chip on">C / C++（MSVC）</span>
+  <span class="chip on">C / C++（GCC / MinGW）</span>
+  <span class="chip on">Java / JVM</span>
+  <span class="chip on">MATLAB / Simulink</span>
+  <span class="chip on">Git 版本控制</span>
+  <span class="chip on">Docker 容器（保留，需启动引擎）</span>
+  <span class="chip on">CMake / Ninja 构建</span>
+  <span class="chip off">.NET / C# 编译</span>
+  <span class="chip off">Go / Rust</span>
+  <span class="chip off">Linux（WSL 无发行版）</span>
+  <span class="chip off">关系型数据库服务端</span>
+</div></div>
+
+<footer>
+  本报告由系统自动探测生成 · 数据来源：Windows 注册表（Uninstall / JavaSoft / CurrentVersion）、
+  环境变量与 PATH 扫描、各工具 <code>--version</code> 输出、conda / pip / npm / pacman 包清单、vswhere 与 nvidia-smi。<br>
+  生成时间 2026-09-15 18:17 · 更新 2026-09-15 18:45 · 目标主机 LAPTOP-GDR9J9EA · 工作目录 D:\Code_practice<br>
+  本次改动：用户 PATH 清理（13→11 项）· CMake 4.3.1-msvc1 + Ninja 1.13.2 纳入 PATH · 删除 conda 空环境 aipractice / chatsummary ·
+  待管理员执行：系统 PATH 清理 + Node MSI 重装
+</footer>
+
+</div>
+</body>
+</html>

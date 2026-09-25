@@ -1,0 +1,4 @@
+opencv-python
+pyorbbecsdk2
+numpy
+requests
