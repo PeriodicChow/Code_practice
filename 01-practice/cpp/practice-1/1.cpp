@@ -2,7 +2,7 @@
 using namespace std;
 
 int& test01(){
-    int a = 10;
+    static int a = 10;
     return a;
 }
 
